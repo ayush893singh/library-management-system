@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Circulation & Fine Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Action -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Circulation Desk & Fine Ledger</h2>
+            <p class="text-sm text-slate-500">Track physical & E-Book loans, fee collections (₹49/₹69), returns, and fine waivers.</p>
+        </div>
+        <button onclick="openModal('issueBookModal')" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-sm shadow-indigo-600/30 transition">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>Issue New Book</span>
+        </button>
+    </div>
+
+    <!-- Filter Tabs & Pricing Banner -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="inline-flex bg-white p-1 rounded-xl border border-slate-200 shadow-sm text-xs font-semibold">
+            <a href="{{ url_for('admin_transactions', status='all') }}" 
+               class="px-3.5 py-1.5 rounded-lg transition {% if status_filter == 'all' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                All Transactions
+            </a>
+            <a href="{{ url_for('admin_transactions', status='Reserved') }}" 
+               class="px-3.5 py-1.5 rounded-lg transition {% if status_filter == 'Reserved' %}bg-amber-600 text-white shadow-sm{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                🟡 Store Pickups
+            </a>
+            <a href="{{ url_for('admin_transactions', status='Issued') }}" 
+               class="px-3.5 py-1.5 rounded-lg transition {% if status_filter == 'Issued' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                Active Loans
+            </a>
+            <a href="{{ url_for('admin_transactions', status='Overdue') }}" 
+               class="px-3.5 py-1.5 rounded-lg transition {% if status_filter == 'Overdue' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                Overdue
+            </a>
+            <a href="{{ url_for('admin_transactions', status='Returned') }}" 
+               class="px-3.5 py-1.5 rounded-lg transition {% if status_filter == 'Returned' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-600 hover:text-slate-900{% endif %}">
+                Returned
+            </a>
+        </div>
+
+        <div class="text-xs bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1.5 rounded-xl flex items-center gap-3">
+            <span>Fees: <strong>E-Book ₹49</strong> &bull; <strong>Normal ₹69</strong></span>
+            <span>|</span>
+            <span>Late Fine: <strong>₹5.00/day</strong></span>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50/75 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-100">
+                    <tr>
+                        <th class="px-5 py-4">Transaction ID</th>
+                        <th class="px-5 py-4">Book</th>
+                        <th class="px-4 py-4">Format & Fee</th>
+                        <th class="px-5 py-4">Student</th>
+                        <th class="px-4 py-4">Due Date</th>
+                        <th class="px-4 py-4 text-center">Status</th>
+                        <th class="px-4 py-4 text-right">Fine</th>
+                        <th class="px-5 py-4 text-right">Admin Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for t in transactions %}
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="px-5 py-4 font-mono text-xs text-slate-400 font-bold whitespace-nowrap">
+                                #TRX-{{ t.id }}
+                            </td>
+                            <td class="px-5 py-4">
+                                <p class="font-bold text-slate-900 text-sm">{{ t.book_title }}</p>
+                                <div class="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                    <span class="font-semibold text-indigo-600">{{ t.language }}</span>
+                                    <span>&bull;</span>
+                                    <span>{{ t.shelf_location or 'Shelf A1' }}</span>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                {% if t.loan_type == 'ebook' %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-100 text-violet-800">
+                                        📱 E-Book (₹{{ "%.0f"|format(t.fee_paid) }})
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                                        📖 Normal (₹{{ "%.0f"|format(t.fee_paid) }})
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-4">
+                                <p class="font-semibold text-slate-800">{{ t.student_name }}</p>
+                                <p class="text-xs font-mono text-indigo-600 font-bold">ID: {{ t.student_roll }}</p>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <span class="text-xs font-semibold {{ 'text-rose-600 font-bold' if t.is_overdue else 'text-slate-700' }}">
+                                    {{ t.due_date }}
+                                </span>
+                                {% if t.is_overdue %}
+                                    <span class="block text-[10px] font-bold text-rose-500 uppercase tracking-wide">
+                                        {{ t.days_late }} days overdue
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-center whitespace-nowrap">
+                                {% if t.status == 'Issued' %}
+                                    {% if t.is_overdue %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                                            Overdue
+                                        </span>
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                                            Issued
+                                        </span>
+                                    {% endif %}
+                                {% elif t.status == 'Reserved' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                                        🟡 Store Pickup
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                        Returned
+                                    </span>
+                                    <span class="block text-[10px] text-slate-400 mt-0.5">{{ t.return_date }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-right whitespace-nowrap">
+                                {% if t.fine_status == 'waived' %}
+                                    <span class="font-bold text-emerald-600 text-xs">₹0.00</span>
+                                    <span class="block text-[10px] text-emerald-500 font-bold">माफ़ (Waived)</span>
+                                {% elif t.current_fine > 0 %}
+                                    <span class="font-bold text-rose-600 text-sm">₹{{ "%.2f"|format(t.current_fine) }}</span>
+                                    <span class="block text-[10px] text-rose-400 font-medium">{{ 'Paid' if t.fine_status == 'paid' else 'Pending' }}</span>
+                                {% else %}
+                                    <span class="text-slate-400 text-xs">₹0.00</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-5 py-4 text-right whitespace-nowrap space-x-1.5">
+                                {% if t.status == 'Reserved' %}
+                                    <!-- Confirm Handover of Physical Copy -->
+                                    <form method="POST" action="{{ url_for('admin_handover_book', trans_id=t.id) }}" class="inline"
+                                          onsubmit="return confirm('Confirm handover of \'{{ t.book_title|escape }}\' to student {{ t.student_name }} ({{ t.student_roll }})? Official 14-day loan will start today.');">
+                                        <button type="submit" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shadow-sm">
+                                            ✅ Confirm Handover (सौंपें)
+                                        </button>
+                                    </form>
+                                {% elif t.status == 'Issued' %}
+                                    <!-- Waive Fine button (Fine Maaf Karna) -->
+                                    {% if t.current_fine > 0 and t.fine_status != 'waived' %}
+                                        <form method="POST" action="{{ url_for('admin_waive_fine', trans_id=t.id) }}" class="inline"
+                                              onsubmit="return confirm('क्या आप इस छात्र का ₹{{ '%.2f'|format(t.current_fine) }} का जुर्माना माफ़ (Waive) करना चाहते हैं?');">
+                                            <button type="submit" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-xs font-bold transition" title="Waive Fine">
+                                                माफ़ करें
+                                            </button>
+                                        </form>
+                                    {% endif %}
+
+                                    <!-- Return Book button (Admin Desk Only) -->
+                                    <form method="POST" action="{{ url_for('admin_return_book', trans_id=t.id) }}" class="inline"
+                                          onsubmit="return confirm('Confirm returning \'{{ t.book_title|escape }}\'? {% if t.current_fine > 0 and t.fine_status != 'waived' %}Fine: ₹{{ '%.2f'|format(t.current_fine) }}{% endif %}');">
+                                        <button type="submit" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition shadow-sm">
+                                            Return Book
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <span class="inline-flex items-center gap-1 text-xs text-slate-400 font-medium">
+                                        <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500"></i> Closed
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center text-slate-400">
+                                <i data-lucide="inbox" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                                <p class="text-sm font-semibold text-slate-600">No circulation records found in this view.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Issue Book Modal -->
+<div id="issueBookModal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-slate-900">Issue Book to Student</h3>
+            <button onclick="closeModal('issueBookModal')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ url_for('admin_issue_book') }}" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Book *</label>
+                <select name="book_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">-- Choose Book --</option>
+                    {% for b in available_books %}
+                        <option value="{{ b.id }}">{{ b.title }} ({{ b.language }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Student *</label>
+                <select name="user_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">-- Choose Student --</option>
+                    {% for s in students_list %}
+                        <option value="{{ s.id }}">{{ s.name }} (ID: {{ s.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Book Format *</label>
+                <select name="loan_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="ebook">📱 E-Book (Digital Copy - Fee ₹49)</option>
+                    <option value="normal">📖 Normal Book (Physical Copy - Fee ₹69)</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Loan Duration (Days)</label>
+                <select name="loan_days" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="14" selected>14 Days (Standard)</option>
+                    <option value="7">7 Days (Short Loan)</option>
+                    <option value="21">21 Days (3 Weeks)</option>
+                    <option value="30">30 Days (1 Month)</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3">
+                <button type="button" onclick="closeModal('issueBookModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm">Confirm Issue</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+</script>
+{% endblock %}

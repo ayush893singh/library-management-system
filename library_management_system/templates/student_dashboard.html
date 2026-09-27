@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block title %}Student Portal{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Student Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 text-xs font-bold uppercase tracking-wider">Student Portal</span>
+                <span class="font-mono text-xs text-slate-400">Student ID / Roll: {{ current_user.username }}</span>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">Hello, {{ current_user.name }}!</h2>
+            <p class="text-sm text-slate-500">Read your E-Books online, track store pickup bookings, check library schedule, and view fee receipts.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('student_catalog') }}" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition">
+                <i data-lucide="book-open-check" class="w-4 h-4"></i>
+                <span>Browse Catalog / Issue Book</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Student Metric Cards (4 Cards) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Card 1: My E-Books -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">My E-Books (Digital)</p>
+                <p class="text-2xl font-extrabold text-indigo-600 mt-1">{{ active_ebooks|length }}</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">Read online 24/7</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <i data-lucide="smartphone" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <!-- Card 2: Store Pickup Reservations -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Store Pickups</p>
+                <p class="text-2xl font-extrabold text-amber-600 mt-1">{{ reserved_books|length }}</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">"Store par jakar le lunga"</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="store" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <!-- Card 3: Physical Books in Hand -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Physical Books in Hand</p>
+                <p class="text-2xl font-extrabold text-slate-800 mt-1">{{ active_physical_loans|length }}</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">Handed over by desk</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                <i data-lucide="book-open" class="w-6 h-6"></i>
+            </div>
+        </div>
+
+        <!-- Card 4: Fine Status -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Pending Late Fines</p>
+                <p class="text-2xl font-extrabold {% if total_pending_fine > 0 %}text-rose-600{% else %}text-emerald-600{% endif %} mt-1">
+                    ₹{{ "%.2f"|format(total_pending_fine) }}
+                </p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">{{ 'Pay via UPI QR below' if total_pending_fine > 0 else 'All clear on schedule!' }}</p>
+            </div>
+            <div class="w-12 h-12 rounded-xl {% if total_pending_fine > 0 %}bg-rose-50 text-rose-600{% else %}bg-emerald-50 text-emerald-600{% endif %} flex items-center justify-center">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 1: MY DIGITAL E-BOOKS (ONLINE READABLE WITH AUTO-LOCK) -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                    <h3 class="font-extrabold text-slate-900 text-lg">📱 My Digital E-Books (ऑनलाइन ई-बुक्स - तुरंत पढ़ें)</h3>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Read digital books directly inside your browser. If overdue, reading access locks automatically until fine is cleared.</p>
+            </div>
+            <a href="{{ url_for('student_catalog') }}" class="inline-flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                + Browse More E-Books (₹49) &rarr;
+            </a>
+        </div>
+
+        <div class="p-6">
+            {% if active_ebooks %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {% for book in active_ebooks %}
+                        <div class="bg-slate-50 rounded-2xl border border-slate-200/80 p-5 flex flex-col justify-between hover:shadow-md transition">
+                            <div>
+                                <div class="flex items-center justify-between gap-2 mb-2">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-100 text-indigo-800">
+                                        {{ book.category }}
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold {{ 'bg-amber-100 text-amber-900' if book.language == 'Hindi' else 'bg-sky-100 text-sky-900' }}">
+                                        {{ book.language }}
+                                    </span>
+                                </div>
+                                <h4 class="font-extrabold text-slate-900 text-base leading-snug">{{ book.title }}</h4>
+                                <p class="text-xs text-slate-500 mt-0.5">By {{ book.author }}</p>
+
+                                <div class="mt-4 pt-3 border-t border-slate-200 text-xs space-y-1.5">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-500">Loan Due Date:</span>
+                                        <span class="font-bold {{ 'text-rose-600' if book.is_overdue else 'text-slate-700' }}">{{ book.due_date }}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-slate-500">Access Status:</span>
+                                        {% if book.is_expired %}
+                                            <span class="inline-flex items-center gap-1 text-xs font-bold text-rose-600">
+                                                <i data-lucide="lock" class="w-3 h-3"></i> Locked (Overdue)
+                                            </span>
+                                        {% elif book.days_left <= 3 %}
+                                            <span class="text-xs font-bold text-amber-600">
+                                                ⏳ Due in {{ book.days_left }} days
+                                            </span>
+                                        {% else %}
+                                            <span class="text-xs font-bold text-emerald-600">
+                                                Active ({{ book.days_left }} days left)
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 pt-3 border-t border-slate-200 space-y-2">
+                                {% if book.is_expired %}
+                                    <!-- Expired & Auto-Locked Screen link -->
+                                    <a href="{{ url_for('student_read_ebook', trans_id=book.id) }}" 
+                                       class="w-full py-2.5 px-3 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2">
+                                        <i data-lucide="lock" class="w-4 h-4 text-rose-600"></i>
+                                        <span>Reading Locked (समय समाप्त)</span>
+                                    </a>
+                                    {% if book.fine > 0 %}
+                                        <button onclick="openFineModal('{{ book.id }}', '{{ book.title|escape }}', '{{ book.fine }}')"
+                                                class="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+                                            <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+                                            <span>Pay Fine via UPI QR (₹{{ "%.0f"|format(book.fine) }}) & Unlock</span>
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Active: Direct Read Online Button -->
+                                    <a href="{{ url_for('student_read_ebook', trans_id=book.id) }}" 
+                                       class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+                                        <i data-lucide="book-open" class="w-4 h-4"></i>
+                                        <span>📖 Read Online (ऑनलाइन पढ़ें)</span>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-10 text-slate-400">
+                    <i data-lucide="smartphone" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                    <p class="font-bold text-slate-700 text-sm">No active digital E-Books in your account.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Browse the catalog to issue and read books online instantly for ₹49.</p>
+                    <a href="{{ url_for('student_catalog') }}" class="inline-block mt-3 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-xl hover:bg-indigo-100 transition">
+                        Browse E-Books Catalog &rarr;
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SECTION 2: BOOKED FOR STORE PICKUP (RESERVED: "STORE PAR JAKE LE LUNGA") -->
+    <div class="bg-white rounded-3xl border border-amber-200/80 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-amber-100 bg-amber-50/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    <h3 class="font-extrabold text-slate-900 text-lg">🏢 Booked for Store Pickup (स्टोर से प्राप्त करने हेतु आरक्षित भौतिक पुस्तकें)</h3>
+                </div>
+                <p class="text-xs text-slate-600 mt-0.5">
+                    आपने यह पुस्तकें ऑनलाइन अपने लिए बुक की हैं: <strong>"Store par jaake le lunga"</strong>। लाइब्रेरी काउंटर पर जाकर कलेक्ट करें।
+                </p>
+            </div>
+            <span class="px-3 py-1 bg-amber-200 text-amber-900 font-bold text-xs rounded-full self-start sm:self-auto">
+                {{ reserved_books|length }} Awaiting Pickup
+            </span>
+        </div>
+
+        <div class="p-6">
+            {% if reserved_books %}
+                <div class="space-y-4">
+                    <!-- Informative Instruction Banner -->
+                    <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                        <i data-lucide="info" class="w-5 h-5 text-amber-700 mt-0.5 flex-shrink-0"></i>
+                        <div class="text-xs text-amber-900 space-y-1">
+                            <p class="font-bold text-sm">📍 स्टोर पिकअप निर्देश:</p>
+                            <p>लाइब्रेरी काउंटर पर जाएं और लाइब्रेरियन को अपना Student ID (<strong>{{ current_user.username }}</strong>) बताएं। लाइब्रेरियन आपको भौतिक पुस्तक सौंपेंगे (Handover Confirm)। इसके बाद आपका आधिकारिक 14-दिन का लोन शुरू होगा।</p>
+                            <p class="text-amber-800 font-semibold pt-1 border-t border-amber-200">
+                                ⚠️ Return Policy: रिटर्न की पुष्टि (Return Confirm) केवल लाइब्रेरी काउंटर पर एडमिन द्वारा ही की जाएगी। छात्र स्वयं ऑनलाइन रिटर्न नहीं कर सकते।
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-100">
+                                <tr>
+                                    <th class="px-5 py-3.5">Book Title & Shelf</th>
+                                    <th class="px-4 py-3.5">Category & Language</th>
+                                    <th class="px-4 py-3.5">Reservation Fee</th>
+                                    <th class="px-4 py-3.5">Status</th>
+                                    <th class="px-5 py-3.5 text-right">Pickup Location</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                {% for res in reserved_books %}
+                                    <tr class="hover:bg-amber-50/20 transition">
+                                        <td class="px-5 py-4">
+                                            <p class="font-bold text-slate-900 text-sm">{{ res.title }}</p>
+                                            <p class="text-xs text-slate-500 mt-0.5">By {{ res.author }}</p>
+                                        </td>
+                                        <td class="px-4 py-4 whitespace-nowrap">
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">{{ res.category }}</span>
+                                                <span class="px-2 py-0.5 rounded text-[11px] font-semibold {{ 'bg-amber-100 text-amber-800' if res.language == 'Hindi' else 'bg-sky-100 text-sky-800' }}">{{ res.language }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                                                ₹{{ "%.0f"|format(res.fee_paid) }} (Paid via UPI)
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-4 whitespace-nowrap">
+                                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                                🟡 Booked for Pickup
+                                            </span>
+                                        </td>
+                                        <td class="px-5 py-4 text-right whitespace-nowrap">
+                                            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 font-bold text-xs text-slate-800 border border-slate-200">
+                                                📍 {{ res.shelf_location or 'Shelf A1' }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center py-8 text-slate-400">
+                    <i data-lucide="store" class="w-9 h-9 mx-auto mb-2 text-slate-300"></i>
+                    <p class="font-bold text-slate-700 text-sm">No physical books reserved for store pickup.</p>
+                    <p class="text-xs text-slate-500 mt-0.5">Want a physical copy? Reserve in catalog and collect at the library desk!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SECTION 3: ACTIVE PHYSICAL BOOKS IN HAND (HANDED OVER BY ADMIN) -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-slate-700"></span>
+                    <h3 class="font-extrabold text-slate-900 text-lg">📚 Physical Books in Hand (काउंटर से प्राप्त भौतिक पुस्तकें)</h3>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5">Physical books handed over to you by the library desk. Return confirmation is strictly done by Admin at the desk.</p>
+            </div>
+            <span class="text-xs font-bold text-slate-400">
+                {{ active_physical_loans|length }} Books Borrowed
+            </span>
+        </div>
+
+        <div class="p-6">
+            {% if active_physical_loans %}
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-100">
+                            <tr>
+                                <th class="px-5 py-3.5">Book Title & Details</th>
+                                <th class="px-4 py-3.5">Due Date</th>
+                                <th class="px-4 py-3.5">Status</th>
+                                <th class="px-4 py-3.5">Late Fine</th>
+                                <th class="px-5 py-3.5 text-right">Return Policy</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            {% for loan in active_physical_loans %}
+                                <tr class="hover:bg-slate-50/50 transition">
+                                    <td class="px-5 py-4">
+                                        <p class="font-bold text-slate-900 text-sm">{{ loan.title }}</p>
+                                        <p class="text-xs text-slate-500 mt-0.5">By {{ loan.author }} &bull; {{ loan.language }} &bull; {{ loan.shelf_location or 'Shelf A1' }}</p>
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap font-medium text-xs {{ 'text-rose-600 font-bold' if loan.is_overdue else 'text-slate-700' }}">
+                                        {{ loan.due_date }}
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        {% if loan.is_overdue %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                                                🚨 {{ loan.days_late }} days Overdue
+                                            </span>
+                                        {% else %}
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                                📗 In Hand ({{ loan.days_left }}d left)
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-4 py-4 whitespace-nowrap">
+                                        {% if loan.fine > 0 %}
+                                            <span class="font-bold text-rose-600 text-xs">₹{{ "%.2f"|format(loan.fine) }}</span>
+                                            <button onclick="openFineModal('{{ loan.id }}', '{{ loan.title|escape }}', '{{ loan.fine }}')"
+                                                    class="block mt-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline">
+                                                Pay Fine Online (QR)
+                                            </button>
+                                        {% else %}
+                                            <span class="text-emerald-600 text-xs font-semibold">₹0.00</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="px-5 py-4 text-right whitespace-nowrap">
+                                        <span class="inline-flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-xl font-medium">
+                                            <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-slate-400"></i>
+                                            <span>Admin Desk Return Only</span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 flex items-center gap-2">
+                    <i data-lucide="info" class="w-4 h-4 text-slate-400 flex-shrink-0"></i>
+                    <span><strong>Return Policy:</strong> Return confirm sirf Admin library desk par karenge. Pustak jama karne ke liye counter par sampark karein.</span>
+                </div>
+            {% else %}
+                <div class="text-center py-8 text-slate-400">
+                    <i data-lucide="book-check" class="w-9 h-9 mx-auto mb-2 text-slate-300"></i>
+                    <p class="font-bold text-slate-700 text-sm">No physical books currently borrowed in hand.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SECTION 4: STUDENT FEE & PAYMENT RECEIPTS HISTORY -->
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="font-extrabold text-slate-900 text-lg">💳 Fee & Payment Receipts History (फीस एवं भुगतान रसीदें)</h3>
+                <p class="text-xs text-slate-500">Record of book borrow fees (₹49 E-Book / ₹69 Normal) and fine payments</p>
+            </div>
+            <span class="text-xs font-bold text-slate-400">{{ payments|length }} Total Transactions</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-100">
+                    <tr>
+                        <th class="px-5 py-3.5">Payment ID</th>
+                        <th class="px-4 py-3.5">Description</th>
+                        <th class="px-4 py-3.5">Type</th>
+                        <th class="px-4 py-3.5">Amount Paid</th>
+                        <th class="px-4 py-3.5">Method</th>
+                        <th class="px-5 py-3.5 text-right">Date & Time</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for p in payments %}
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="px-5 py-3.5 font-mono text-xs font-bold text-slate-400">
+                                #PAY-{{ p.id }}
+                            </td>
+                            <td class="px-4 py-3.5 font-medium text-slate-800 text-xs">
+                                {{ p.book_title or 'Library Transaction Fee' }}
+                            </td>
+                            <td class="px-4 py-3.5 whitespace-nowrap">
+                                {% if p.payment_type == 'borrow_fee' %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-800">
+                                        Book Borrow Fee
+                                    </span>
+                                {% else %}
+                                    <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800">
+                                        Late Fine Payment
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3.5 font-bold text-slate-900 text-sm">
+                                ₹{{ "%.2f"|format(p.amount) }}
+                            </td>
+                            <td class="px-4 py-3.5 text-xs text-slate-500">
+                                {{ p.payment_method }}
+                            </td>
+                            <td class="px-5 py-3.5 text-right text-xs text-slate-400">
+                                {{ p.created_at[:16] }}
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="px-5 py-8 text-center text-slate-400 text-xs">
+                                No payment receipts recorded yet.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- PAY FINE VIA GOOGLE LENS / UPI QR MODAL -->
+<div id="fineModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 md:p-8 shadow-2xl relative">
+        <button onclick="closeModal('fineModal')" class="absolute right-5 top-5 text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <div class="text-center mb-5">
+            <span class="px-3 py-1 rounded-full bg-rose-100 text-rose-800 text-xs font-bold uppercase tracking-wider">
+                Pay Late Fine
+            </span>
+            <h3 class="font-extrabold text-xl text-slate-900 mt-2" id="fineModalBookTitle">Pay Overdue Fine</h3>
+            <p class="text-xs text-slate-500 mt-0.5">Scan via Google Lens, GPay, Paytm, or PhonePe</p>
+        </div>
+
+        <form id="finePaymentForm" method="POST" action="" class="space-y-4">
+            <!-- QR Box -->
+            <div class="p-4 rounded-2xl bg-gradient-to-b from-slate-50 to-rose-50/30 border border-slate-200 text-center">
+                <div class="inline-block p-3 bg-white rounded-2xl border border-slate-200 shadow-sm my-1">
+                    <img id="fineQrImage" src="" alt="Fine QR Code" class="w-40 h-40 mx-auto rounded-lg">
+                </div>
+                <div class="mt-2 space-y-0.5">
+                    <p class="text-sm text-slate-600">
+                        Fine Amount: <strong class="text-lg text-rose-600 font-extrabold" id="fineModalAmount">₹0.00</strong>
+                    </p>
+                    <p class="text-[11px] font-mono text-slate-500 bg-white inline-block px-2 py-0.5 rounded-lg border border-slate-200">
+                        UPI ID: <strong>libraryfees@upi</strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Optional UTR Ref -->
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">
+                    UPI Reference / UTR No.
+                </label>
+                <input type="text" name="utr_ref" id="fineUtrInput" 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                <span>Payment Done / भुगतान पूरा हुआ (Clear Fine)</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+
+    function openFineModal(transId, bookTitle, fineAmount) {
+        document.getElementById('fineModalBookTitle').innerText = bookTitle;
+        document.getElementById('fineModalAmount').innerText = '₹' + parseFloat(fineAmount).toFixed(2);
+        document.getElementById('finePaymentForm').action = '/student/pay-fine/' + transId;
+
+        const randRef = 'FINE-' + Math.floor(100000 + Math.random() * 900000);
+        document.getElementById('fineUtrInput').value = randRef;
+
+        const upiUri = `upi://pay?pa=libraryfees@upi&pn=LibriFlow+Library&am=${parseFloat(fineAmount).toFixed(2)}&cu=INR&tn=Library+Fine`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&margin=4&data=${encodeURIComponent(upiUri)}`;
+        document.getElementById('fineQrImage').src = qrUrl;
+
+        openModal('fineModal');
+        lucide.createIcons();
+    }
+</script>
+{% endblock %}

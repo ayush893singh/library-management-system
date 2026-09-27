@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 text-xs font-bold uppercase">Admin Command Center</span>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">Library Overview & Operations</h2>
+            <p class="text-sm text-slate-500">Manage physical & digital E-Book circulation, fees (₹49/₹69), students, and library schedule.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="openModal('quickIssueModal')" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-sm shadow-indigo-600/30 transition">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Quick Issue</span>
+            </button>
+            <a href="{{ url_for('admin_books') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm rounded-xl border border-slate-200 shadow-sm transition">
+                <i data-lucide="book-plus" class="w-4 h-4"></i>
+                <span>Manage Books</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Operating Hours Banner -->
+    <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full {{ 'bg-emerald-400 animate-pulse' if library_status.is_open else 'bg-rose-400' }}"></span>
+                    <span class="text-xs font-bold tracking-wider uppercase text-slate-300">{{ library_status.badge_text }}</span>
+                </div>
+                <h3 class="text-xl font-black text-white">Daily Hours: 8:00 AM – 8:00 PM (Monday to Saturday)</h3>
+                <p class="text-xs text-indigo-200 max-w-xl">
+                    <span class="font-bold text-amber-300">Sunday Closed:</span> Library operations remain closed on Sundays. System automatically extends loan return dates falling on Sunday to Monday with ₹0 late fine! Digital E-Books remain accessible 24/7.
+                </p>
+            </div>
+
+            <!-- Notice Board Update -->
+            <div class="bg-slate-800/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700/60 max-w-sm w-full">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 flex items-center gap-1">
+                    <i data-lucide="bell" class="w-3.5 h-3.5 text-indigo-400"></i> Active Announcement Notice
+                </p>
+                <form method="POST" action="{{ url_for('update_notice') }}" class="space-y-2">
+                    <input type="text" name="notice" value="{{ library_status.notice }}" required 
+                           class="w-full bg-slate-900/90 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none">
+                    <button type="submit" class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition">
+                        Update Notice Board
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Card 1 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Book Titles</p>
+                <p class="text-2xl font-extrabold text-slate-900 mt-1">{{ total_titles }}</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">{{ total_copies }} physical copies</p>
+            </div>
+            <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <i data-lucide="book-copy" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Revenue</p>
+                <p class="text-2xl font-extrabold text-emerald-600 mt-1">₹{{ "%.0f"|format(total_fees_collected) }}</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">E-Book (₹49) / Normal (₹69)</p>
+            </div>
+            <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <i data-lucide="wallet" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- Card 3: Store Pickup Bookings -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Store Pickups</p>
+                <p class="text-2xl font-extrabold {% if pending_pickups|length > 0 %}text-amber-600 animate-pulse{% else %}text-slate-700{% endif %} mt-1">
+                    {{ pending_pickups|length }}
+                </p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">Booked for desk pickup</p>
+            </div>
+            <div class="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <i data-lucide="store" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Active Borrowed</p>
+                <p class="text-2xl font-extrabold text-indigo-600 mt-1">{{ active_loans }}</p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">{{ total_students }} registered</p>
+            </div>
+            <div class="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+            </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Overdue Loans</p>
+                <p class="text-2xl font-extrabold {% if overdue_loans > 0 %}text-rose-600{% else %}text-slate-800{% endif %} mt-1">
+                    {{ overdue_loans }}
+                </p>
+                <p class="text-xs text-slate-500 mt-1 font-medium">Fine: ₹{{ "%.0f"|format(total_fine_collected) }}</p>
+            </div>
+            <div class="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                <i data-lucide="alert-circle" class="w-5 h-5"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- PENDING STORE PICKUPS SECTION (STUDENT RESERVATIONS: "STORE PAR JAKE LE LUNGA") -->
+    {% if pending_pickups|length > 0 %}
+    <div class="bg-amber-50/60 rounded-3xl border-2 border-amber-300 p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                    <i data-lucide="store" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="font-extrabold text-slate-900 text-lg">🟡 Pending Store Pickups (छात्रों द्वारा आरक्षित भौतिक पुस्तकें)</h3>
+                    <p class="text-xs text-slate-600">Students have booked these physical copies online ("Store par jake le lunga"). Confirm handover when they visit the library desk.</p>
+                </div>
+            </div>
+            <span class="px-3 py-1 bg-amber-200 text-amber-900 font-bold text-xs rounded-full self-start sm:self-auto">
+                {{ pending_pickups|length }} Awaiting Handover
+            </span>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-amber-100/60 text-slate-700 uppercase text-[11px] font-bold tracking-wider border-b border-amber-200">
+                        <tr>
+                            <th class="px-5 py-3.5">Book Title & Shelf</th>
+                            <th class="px-4 py-3.5">Student Details</th>
+                            <th class="px-4 py-3.5">Fee Paid</th>
+                            <th class="px-4 py-3.5">Booking Date</th>
+                            <th class="px-5 py-3.5 text-right">Admin Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for p in pending_pickups %}
+                            <tr class="hover:bg-amber-50/30 transition">
+                                <td class="px-5 py-4">
+                                    <div class="font-bold text-slate-900 text-sm">{{ p.book_title }}</div>
+                                    <div class="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                                        <span class="font-semibold text-indigo-700">{{ p.language }}</span>
+                                        <span>&bull;</span>
+                                        <span class="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                            📍 {{ p.shelf_location or 'Shelf A1' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4">
+                                    <div class="font-bold text-slate-800">{{ p.student_name }}</div>
+                                    <div class="text-xs font-mono text-indigo-600 font-bold">Roll/ID: {{ p.student_roll }}</div>
+                                    {% if p.student_phone %}
+                                        <div class="text-xs text-slate-400 font-mono">{{ p.student_phone }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                        ₹{{ "%.0f"|format(p.fee_paid) }} (Paid via UPI)
+                                    </span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-xs text-slate-600 font-medium">
+                                    {{ p.issue_date }}
+                                </td>
+                                <td class="px-5 py-4 text-right whitespace-nowrap">
+                                    <form method="POST" action="{{ url_for('admin_handover_book', trans_id=p.id) }}" class="inline"
+                                          onsubmit="return confirm('Confirm handover of \'{{ p.book_title|escape }}\' to student {{ p.student_name }} ({{ p.student_roll }})? Official 14-day loan will start today.');">
+                                        <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/30 transition">
+                                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                            <span>Confirm Handover (पुस्तक सौंपें)</span>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Section: Recent Loans + Quick Issue Box -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Recent Loans Feed -->
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base">Recent Circulation Desk Activity</h3>
+                    <p class="text-xs text-slate-500">Live book issues, E-Book checkouts, and fine waivers</p>
+                </div>
+                <a href="{{ url_for('admin_transactions') }}" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700">
+                    View All Circulation &rarr;
+                </a>
+            </div>
+
+            <div class="overflow-x-auto flex-1">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-50/75 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-100">
+                        <tr>
+                            <th class="px-5 py-3.5">Book & Format</th>
+                            <th class="px-4 py-3.5">Student</th>
+                            <th class="px-4 py-3.5">Due Date</th>
+                            <th class="px-4 py-3.5">Fine</th>
+                            <th class="px-5 py-3.5 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for t in recent_loans %}
+                            <tr class="hover:bg-slate-50/50 transition">
+                                <td class="px-5 py-4">
+                                    <div class="font-bold text-slate-800 text-sm max-w-[200px] truncate">{{ t.book_title }}</div>
+                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                        {% if t.loan_type == 'ebook' %}
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-100 text-violet-800">E-Book (₹49)</span>
+                                        {% else %}
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Normal (₹69)</span>
+                                        {% endif %}
+                                        <span class="text-[11px] text-slate-400 font-medium">{{ t.language }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-4 text-slate-600 font-medium">
+                                    <div>{{ t.student_name }}</div>
+                                    <span class="text-[11px] font-mono text-slate-400">ID: {{ t.student_id }}</span>
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    <span class="text-xs font-medium {{ 'text-rose-600 font-bold' if t.is_overdue else 'text-slate-600' }}">
+                                        {{ t.due_date }}
+                                    </span>
+                                    {% if t.is_overdue %}
+                                        <span class="block text-[10px] text-rose-500 font-bold">{{ t.days_late }}d overdue</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap">
+                                    {% if t.fine_status == 'waived' %}
+                                        <span class="text-xs font-bold text-emerald-600">₹0.00 (माफ़)</span>
+                                    {% elif t.pending_fine > 0 %}
+                                        <span class="text-xs font-bold text-rose-600">₹{{ "%.2f"|format(t.pending_fine) }}</span>
+                                    {% else %}
+                                        <span class="text-xs text-slate-400">₹0.00</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-5 py-4 text-right whitespace-nowrap space-x-1">
+                                    {% if t.status == 'Issued' %}
+                                        {% if t.pending_fine > 0 and t.fine_status != 'waived' %}
+                                            <form method="POST" action="{{ url_for('admin_waive_fine', trans_id=t.id) }}" class="inline"
+                                                  onsubmit="return confirm('क्या आप इस छात्र का ₹{{ '%.2f'|format(t.pending_fine) }} जुर्माना माफ़ (Waive) करना चाहते हैं?');">
+                                                <button type="submit" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 rounded text-xs font-bold transition">
+                                                    माफ़ करें
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                        <form method="POST" action="{{ url_for('admin_return_book', trans_id=t.id) }}" class="inline">
+                                            <button type="submit" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium transition shadow-sm">
+                                                Return
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-xs text-slate-400 font-medium">Completed</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="px-5 py-8 text-center text-slate-400 text-sm">
+                                    No loans issued yet.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Issue Desk -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                        <i data-lucide="bookmark-plus" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 text-base">Quick Circulation Issue</h3>
+                        <p class="text-xs text-slate-500">Issue normal (₹69) or E-Book (₹49)</p>
+                    </div>
+                </div>
+
+                <form method="POST" action="{{ url_for('admin_issue_book') }}" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Book</label>
+                        <select name="book_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="">-- Choose Book --</option>
+                            {% for b in available_books %}
+                                <option value="{{ b.id }}">{{ b.title }} ({{ b.language }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Select Student</label>
+                        <select name="user_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="">-- Choose Student --</option>
+                            {% for s in students_list %}
+                                <option value="{{ s.id }}">{{ s.name }} (ID: {{ s.username }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Format</label>
+                        <select name="loan_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="ebook">📱 E-Book (Fee: ₹49)</option>
+                            <option value="normal">📖 Normal Book (Fee: ₹69)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Loan Duration</label>
+                        <select name="loan_days" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="14" selected>14 Days (Standard Loan)</option>
+                            <option value="7">7 Days (Short Loan)</option>
+                            <option value="21">21 Days (Extended Loan)</option>
+                            <option value="30">30 Days (Full Month)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-sm transition">
+                        Confirm & Issue Book
+                    </button>
+                </form>
+            </div>
+
+            <!-- Fine Notice -->
+            <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-50/75 p-3 rounded-xl">
+                <div class="flex items-start gap-2.5">
+                    <i data-lucide="info" class="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0"></i>
+                    <p class="text-xs text-slate-600">
+                        Admin has the authority to <strong>Waive Fine (माफ़ करें)</strong> anytime without collecting money.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Issue Modal -->
+<div id="quickIssueModal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-lg text-slate-900">Issue Book to Student</h3>
+            <button onclick="closeModal('quickIssueModal')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ url_for('admin_issue_book') }}" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Book</label>
+                <select name="book_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">-- Choose Book --</option>
+                    {% for b in available_books %}
+                        <option value="{{ b.id }}">{{ b.title }} ({{ b.language }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Student</label>
+                <select name="user_id" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">-- Choose Student --</option>
+                    {% for s in students_list %}
+                        <option value="{{ s.id }}">{{ s.name }} (ID: {{ s.username }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Format</label>
+                <select name="loan_type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="ebook">📱 E-Book (Digital Copy - Fee ₹49)</option>
+                    <option value="normal">📖 Normal Book (Physical Copy - Fee ₹69)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Loan Duration (Days)</label>
+                <input type="number" name="loan_days" value="14" min="1" max="90" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="closeModal('quickIssueModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm">Issue Book</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+</script>
+{% endblock %}
