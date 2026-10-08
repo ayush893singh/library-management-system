@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Browse Books Catalog{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Library Books & E-Books Catalog</h2>
+            <p class="text-sm text-slate-500">Scan & Pay via Google Lens, GPay, or Paytm to issue E-Books (₹{{ "%.0f"|format(ebook_fee) }}) or Physical Copies (₹{{ "%.0f"|format(normal_fee) }}).</p>
+        </div>
+        <a href="{{ url_for('student_dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition">
+            &larr; Back to My Dashboard
+        </a>
+    </div>
+
+    <!-- Search & Filter Bar with Language & Category -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+        <form method="GET" action="{{ url_for('student_catalog') }}" class="flex flex-1 flex-col sm:flex-row gap-3 w-full">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search by title, author, or keyword in Hindi/English..." 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <!-- Language Filter -->
+            <div class="w-full sm:w-36">
+                <select name="language" onchange="this.form.submit()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Languages</option>
+                    <option value="Hindi" {% if selected_language == 'Hindi' %}selected{% endif %}>🇮🇳 Hindi (हिंदी)</option>
+                    <option value="English" {% if selected_language == 'English' %}selected{% endif %}>🇬🇧 English</option>
+                </select>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="w-full sm:w-44">
+                <select name="category" onchange="this.form.submit()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl transition">
+                Search
+            </button>
+            {% if query or selected_category or selected_language %}
+                <a href="{{ url_for('student_catalog') }}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-xl transition flex items-center justify-center">
+                    Reset
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Book Grid Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for b in books %}
+            <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 flex flex-col justify-between hover:shadow-lg transition">
+                <div>
+                    <!-- Category & Language Badges -->
+                    <div class="flex items-start justify-between gap-2 mb-3">
+                        <div class="flex flex-wrap gap-1.5">
+                            <span class="px-2.5 py-0.5 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-bold">
+                                {{ b.category }}
+                            </span>
+                            <span class="px-2 py-0.5 rounded-lg text-xs font-bold {{ 'bg-amber-50 text-amber-800 border border-amber-200' if b.language == 'Hindi' else 'bg-sky-50 text-sky-800 border border-sky-200' }}">
+                                {{ b.language }}
+                            </span>
+                        </div>
+                        {% if b.available_copies > 0 %}
+                            <span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> In Stock
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center gap-1 text-xs font-bold text-rose-500">
+                                <span class="w-2 h-2 rounded-full bg-rose-500"></span> Physical Borrowed
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <h3 class="font-extrabold text-slate-900 text-lg leading-snug">{{ b.title }}</h3>
+                    <div class="flex items-center justify-between gap-1 mt-1">
+                        <p class="text-xs text-slate-500 font-medium">By {{ b.author }}</p>
+                        {% if b.id in ratings_map %}
+                            <span class="inline-flex items-center gap-1 text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                                ⭐ {{ ratings_map[b.id].avg }} <span class="text-[10px] text-slate-400 font-normal">({{ ratings_map[b.id].cnt }})</span>
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-100 space-y-1.5 text-xs text-slate-500">
+                        <div class="flex justify-between">
+                            <span>Shelf Location:</span>
+                            <span class="font-bold text-slate-700">{{ b.shelf_location or 'Shelf A1' }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Physical Copies:</span>
+                            <span class="font-bold text-slate-800">{{ b.available_copies }} of {{ b.total_copies }} available</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-5 pt-4 border-t border-slate-100 space-y-2">
+                    <div class="flex items-center justify-between text-xs text-slate-500">
+                        <span>Digital Access: <strong class="text-indigo-600 font-bold">₹49</strong></span>
+                        <span>Physical Copy: <strong class="text-slate-800 font-bold">₹69</strong></span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <!-- Option 1: Instant Online E-Book -->
+                        <button onclick="openBorrowModal('{{ b.id }}', '{{ b.title|escape }}', '{{ b.available_copies }}', '{{ b.shelf_location }}', 'ebook')" 
+                                class="w-full py-2 px-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm shadow-indigo-600/20 transition flex items-center justify-center gap-1.5 text-center">
+                            <i data-lucide="smartphone" class="w-3.5 h-3.5"></i>
+                            <span>Read Online (₹49)</span>
+                        </button>
+
+                        <!-- Option 2: Store Pickup Physical Copy ("Store par jake le lunga") -->
+                        {% if b.available_copies > 0 %}
+                            <button onclick="openBorrowModal('{{ b.id }}', '{{ b.title|escape }}', '{{ b.available_copies }}', '{{ b.shelf_location }}', 'normal')" 
+                                    class="w-full py-2 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 text-center"
+                                    title="Reserve physical copy: 'Store par jake le lunga'">
+                                <i data-lucide="store" class="w-3.5 h-3.5 text-amber-700"></i>
+                                <span>Store Pickup (₹69)</span>
+                            </button>
+                        {% else %}
+                            {% if b.id in user_wait_ids %}
+                                <span class="w-full py-2 px-2 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold text-center block" title="Aap already waiting list mein hain">
+                                    ⏳ In Waiting List
+                                </span>
+                            {% else %}
+                                <form method="POST" action="{{ url_for('join_waitlist', book_id=b.id) }}" class="w-full">
+                                    <button type="submit" class="w-full py-2 px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 text-center" title="Physical copy out of stock: Join Waiting List">
+                                        <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-700"></i>
+                                        <span>Join Waitlist</span>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="col-span-full bg-white rounded-2xl p-12 text-center text-slate-400 border border-slate-100">
+                <i data-lucide="book-x" class="w-12 h-12 mx-auto mb-3 text-slate-300"></i>
+                <p class="font-bold text-slate-700 text-base">No books found</p>
+                <p class="text-xs text-slate-400 mt-1">Try another search keyword or clear filters.</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+        <div class="flex items-center justify-center gap-2 pt-4">
+            {% if page > 1 %}
+                <a href="{{ url_for('student_catalog', page=page-1, q=query, category=selected_category, language=selected_language) }}"
+                   class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition">
+                    &larr; Prev
+                </a>
+            {% endif %}
+
+            <div class="flex items-center gap-1">
+                {% for p in range(1, total_pages + 1) %}
+                    <a href="{{ url_for('student_catalog', page=p, q=query, category=selected_category, language=selected_language) }}"
+                       class="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold transition {% if p == page %}bg-indigo-600 text-white shadow-md shadow-indigo-600/30{% else %}bg-white text-slate-700 border border-slate-200 hover:bg-slate-50{% endif %}">
+                        {{ p }}
+                    </a>
+                {% endfor %}
+            </div>
+
+            {% if page < total_pages %}
+                <a href="{{ url_for('student_catalog', page=page+1, q=query, category=selected_category, language=selected_language) }}"
+                   class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition">
+                    Next &rarr;
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Interactive Scan & Pay Borrow Modal -->
+<div id="borrowModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl relative max-h-[95vh] overflow-y-auto">
+        <!-- Close button -->
+        <button onclick="closeModal('borrowModal')" class="absolute right-5 top-5 text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <div class="text-center mb-5">
+            <span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold uppercase tracking-wider">
+                UPI Scan & Pay
+            </span>
+            <h3 class="font-extrabold text-xl text-slate-900 mt-2" id="modalBookTitle">Issue Book</h3>
+            <p class="text-xs text-slate-500 mt-0.5" id="modalShelfInfo"></p>
+        </div>
+
+        <form method="POST" action="{{ url_for('student_issue_book') }}" class="space-y-5">
+            <input type="hidden" name="book_id" id="modalBookId">
+
+            <!-- Step 1: Select Format (E-Book vs Normal) -->
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-2">1. Select Book Format</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- E-Book Option -->
+                    <label onclick="updatePaymentAmount('ebook', 49)" class="p-3.5 rounded-2xl border-2 border-indigo-600 bg-indigo-50/40 cursor-pointer block text-center transition" id="ebookOptionLabel">
+                        <input type="radio" name="loan_type" value="ebook" checked class="hidden" id="radioEbook">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center mx-auto mb-1.5">
+                            <i data-lucide="smartphone" class="w-4 h-4"></i>
+                        </div>
+                        <p class="font-bold text-slate-900 text-xs">📱 E-Book (Digital)</p>
+                        <p class="text-[11px] text-slate-500">Read Online Instant</p>
+                        <p class="text-sm font-extrabold text-indigo-700 mt-1">₹49</p>
+                    </label>
+
+                    <!-- Normal Book Option -->
+                    <label onclick="updatePaymentAmount('normal', 69)" class="p-3.5 rounded-2xl border border-slate-200 bg-white cursor-pointer block text-center transition" id="normalOptionLabel">
+                        <input type="radio" name="loan_type" value="normal" class="hidden" id="radioNormal">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center mx-auto mb-1.5">
+                            <i data-lucide="store" class="w-4 h-4"></i>
+                        </div>
+                        <p class="font-bold text-slate-900 text-xs">🏢 Store Pickup</p>
+                        <p class="text-[11px] text-slate-500">"Store par jakar le lunga"</p>
+                        <p class="text-sm font-extrabold text-amber-800 mt-1">₹69</p>
+                    </label>
+                </div>
+
+                <!-- Explanation Banner -->
+                <div id="formatExplanation" class="mt-2.5 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900">
+                    📱 <strong>Digital E-Book:</strong> पेमेंट के बाद पुस्तक तुरंत आपके डैशबोर्ड पर ऑनलाइन पढ़ने के लिए उपलब्ध हो जाएगी।
+                </div>
+            </div>
+
+            <!-- Step 2: Google Lens / UPI QR Code Box -->
+            <div class="p-5 rounded-2xl bg-gradient-to-b from-slate-50 to-indigo-50/30 border border-slate-200 text-center">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <p class="text-xs font-bold text-slate-700">Scan via Google Lens, GPay, Paytm, or PhonePe</p>
+                </div>
+
+                <!-- Real Scannable QR Code Image -->
+                <div class="inline-block p-3 bg-white rounded-2xl border border-slate-200 shadow-sm my-1">
+                    <img id="upiQrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=upi%3A%2F%2Fpay%3Fpa%3Dlibraryfees%40upi%26pn%3DLibriFlow%2BLibrary%26am%3D49.00%26cu%3DINR%26tn%3DLibriFlow%2BBook%2BFee" 
+                         alt="UPI QR Code" class="w-44 h-44 mx-auto rounded-lg">
+                </div>
+
+                <!-- Price & UPI ID Display -->
+                <div class="mt-2 space-y-1">
+                    <p class="text-sm text-slate-600">
+                        Amount to Pay: <strong class="text-base text-indigo-700" id="qrPriceDisplay">₹49.00</strong>
+                    </p>
+                    <p class="text-[11px] font-mono text-slate-500 bg-white inline-block px-2.5 py-1 rounded-lg border border-slate-200">
+                        UPI ID: <strong class="text-slate-800">libraryfees@upi</strong>
+                    </p>
+                </div>
+
+                <div class="mt-3 flex items-center justify-center gap-3 text-[11px] text-slate-500">
+                    <span class="flex items-center gap-1 font-semibold text-indigo-700">
+                        <i data-lucide="camera" class="w-3.5 h-3.5"></i> Google Lens Ready
+                    </span>
+                    <span>&bull;</span>
+                    <span class="text-slate-600 font-semibold">100% Instant Verification</span>
+                </div>
+            </div>
+
+            <!-- Reference / UTR Input -->
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">
+                    UPI Reference / UTR No. (Auto-Generated / Optional)
+                </label>
+                <input type="text" name="utr_ref" id="utrRefInput" 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <!-- Submit "Payment Done" Button -->
+            <div class="pt-2">
+                <button type="submit" id="submitPaymentBtn" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2">
+                    <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                    <span id="submitBtnText">Payment Done / भुगतान पूरा हुआ (Get E-Book)</span>
+                </button>
+                <p class="text-[11px] text-slate-400 text-center mt-2" id="submitNotice">
+                    "Payment Done" पर क्लिक करते ही ट्रांजेक्शन कन्फर्म होगा और पुस्तक आपके अकाउंट में जुड़ जाएगी।
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let currentSelectedPrice = 49;
+    let currentSelectedTitle = "Book";
+
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+
+    function openBorrowModal(bookId, title, copies, shelf, defaultType) {
+        currentSelectedTitle = title;
+        document.getElementById('modalBookId').value = bookId;
+        document.getElementById('modalBookTitle').innerText = title;
+        document.getElementById('modalShelfInfo').innerText = 'Shelf Location: ' + shelf + ' (' + copies + ' copies in library)';
+        
+        const type = defaultType || 'ebook';
+        const price = type === 'ebook' ? 49 : 69;
+        updatePaymentAmount(type, price);
+        
+        // Generate a random realistic UPI transaction reference
+        const randRef = 'UPI-' + Math.floor(100000 + Math.random() * 900000);
+        document.getElementById('utrRefInput').value = randRef;
+
+        openModal('borrowModal');
+        lucide.createIcons();
+    }
+
+    function updatePaymentAmount(type, price) {
+        currentSelectedPrice = price;
+
+        const ebookLabel = document.getElementById('ebookOptionLabel');
+        const normalLabel = document.getElementById('normalOptionLabel');
+        const radioEbook = document.getElementById('radioEbook');
+        const radioNormal = document.getElementById('radioNormal');
+        const explanation = document.getElementById('formatExplanation');
+        const submitBtnText = document.getElementById('submitBtnText');
+
+        if (type === 'ebook') {
+            radioEbook.checked = true;
+            ebookLabel.className = "p-3.5 rounded-2xl border-2 border-indigo-600 bg-indigo-50/40 cursor-pointer block text-center transition";
+            normalLabel.className = "p-3.5 rounded-2xl border border-slate-200 bg-white cursor-pointer block text-center transition";
+            explanation.className = "mt-2.5 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900";
+            explanation.innerHTML = '📱 <strong>डिजिटल ई-बुक (₹49):</strong> पेमेंट के बाद पुस्तक तुरंत आपके डैशबोर्ड पर ऑनलाइन पढ़ने के लिए उपलब्ध हो जाएगी।';
+            submitBtnText.innerText = "Payment Done / भुगतान पूरा हुआ (Get E-Book)";
+        } else {
+            radioNormal.checked = true;
+            normalLabel.className = "p-3.5 rounded-2xl border-2 border-amber-600 bg-amber-50/40 cursor-pointer block text-center transition";
+            ebookLabel.className = "p-3.5 rounded-2xl border border-slate-200 bg-white cursor-pointer block text-center transition";
+            explanation.className = "mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900";
+            explanation.innerHTML = '🏢 <strong>स्टोर पिकअप भौतिक पुस्तक (₹69):</strong> यह पुस्तक आपके लिए काउंटर पर आरक्षित हो जाएगी ("Store par jaake le lunga")। लाइब्रेरी काउंटर पर जाकर अपना Student ID दिखाकर पुस्तक कलेक्ट करें। रिटर्न कन्फर्मेशन केवल Admin द्वारा ही काउंटर पर किया जाएगा।';
+            submitBtnText.innerText = "Payment Done / Book for Store Pickup (आरक्षित करें)";
+        }
+
+        document.getElementById('qrPriceDisplay').innerText = '₹' + price + '.00';
+
+        // Update real Google Lens / UPI QR code URL with dynamic price and note
+        const upiUri = `upi://pay?pa=libraryfees@upi&pn=LibriFlow+Library&am=${price}.00&cu=INR&tn=Borrow+Fee`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=4&data=${encodeURIComponent(upiUri)}`;
+        document.getElementById('upiQrImage').src = qrUrl;
+    }
+</script>
+{% endblock %}

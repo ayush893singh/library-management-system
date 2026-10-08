@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Students{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Registered Students Directory</h2>
+            <p class="text-sm text-slate-500">Manage student profiles, update student details, and inspect borrowing history.</p>
+        </div>
+        <a href="{{ url_for('register') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-sm shadow-indigo-600/30 transition">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span>Register New Student</span>
+        </a>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <form method="GET" action="{{ url_for('admin_students') }}" class="flex flex-1 gap-3 w-full">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search by name, student ID / roll no, or phone..." 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl transition">
+                Search
+            </button>
+            {% if query %}
+                <a href="{{ url_for('admin_students') }}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-xl transition flex items-center justify-center">
+                    Reset
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Students Table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50/75 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-100">
+                    <tr>
+                        <th class="px-6 py-4">Student Info</th>
+                        <th class="px-4 py-4">Student ID / Roll No</th>
+                        <th class="px-4 py-4">Phone</th>
+                        <th class="px-4 py-4 text-center">Active Loans</th>
+                        <th class="px-4 py-4 text-center">Total History</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for s in students %}
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-sm">
+                                        {{ s.name[:1] }}
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-slate-900">{{ s.name }}</p>
+                                        <p class="text-[11px] text-slate-400">Registered: {{ s.created_at[:10] }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 py-4 font-mono text-xs font-bold text-indigo-600">
+                                {{ s.username }}
+                            </td>
+                            <td class="px-4 py-4 text-xs text-slate-600">
+                                {{ s.phone or 'Not provided' }}
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                {% if s.active_books > 0 %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                                        {{ s.active_books }} borrowed
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
+                                        0
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <span class="text-xs font-semibold text-slate-700">{{ s.total_borrowed }} books</span>
+                            </td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap space-x-1.5">
+                                <!-- Edit Student Button -->
+                                <button onclick="editStudentModal('{{ s.id }}', '{{ s.name|escape }}', '{{ s.username|escape }}', '{{ s.phone or '' }}')" 
+                                        class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition" title="Edit Student">
+                                    Edit Details
+                                </button>
+                                <!-- View History Button -->
+                                <button onclick="viewHistory('{{ s.id }}', '{{ s.name|escape }}', '{{ s.username|escape }}')" 
+                                        class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg transition" title="Borrowing History">
+                                    History
+                                </button>
+                                <!-- Delete Button -->
+                                <form method="POST" action="{{ url_for('admin_delete_student', user_id=s.id) }}" class="inline" onsubmit="return confirm('Delete this student?');">
+                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Delete Student">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="px-6 py-12 text-center text-slate-400">
+                                <i data-lucide="users" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                                <p class="text-sm font-semibold text-slate-600">No students found.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Student Modal -->
+<div id="editStudentModal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-lg text-slate-900">Edit Student Details</h3>
+            <button onclick="closeModal('editStudentModal')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form id="editStudentForm" method="POST" action="" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Full Name *</label>
+                <input type="text" id="editStudentName" name="name" required 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Student ID / Roll No *</label>
+                <input type="text" id="editStudentUsername" name="username" required 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Phone Number</label>
+                <input type="text" id="editStudentPhone" name="phone" 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Reset Password (Optional)</label>
+                <input type="password" name="password" placeholder="Leave empty to keep existing password" 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="flex justify-end gap-3 pt-3">
+                <button type="button" onclick="closeModal('editStudentModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- History Modal -->
+<div id="historyModal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl relative">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+            <div>
+                <h3 class="font-bold text-lg text-slate-900">Student Loan History</h3>
+                <p class="text-xs text-slate-500" id="historyStudentInfo"></p>
+            </div>
+            <button onclick="closeModal('historyModal')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        
+        <div id="historyContent" class="max-h-80 overflow-y-auto">
+            <p class="text-center text-slate-400 text-sm py-6">Loading records...</p>
+        </div>
+
+        <div class="flex justify-end pt-4 border-t border-slate-100 mt-4">
+            <button type="button" onclick="closeModal('historyModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Close</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+    function editStudentModal(userId, name, username, phone) {
+        document.getElementById('editStudentForm').action = '/admin/students/edit/' + userId;
+        document.getElementById('editStudentName').value = name;
+        document.getElementById('editStudentUsername').value = username;
+        document.getElementById('editStudentPhone').value = phone;
+        openModal('editStudentModal');
+    }
+    async function viewHistory(userId, name, roll) {
+        document.getElementById('historyStudentInfo').innerText = 'Student: ' + name + ' (ID: ' + roll + ')';
+        const contentDiv = document.getElementById('historyContent');
+        contentDiv.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">Loading records...</p>';
+        openModal('historyModal');
+
+        try {
+            const res = await fetch('/admin/students/' + userId + '/history');
+            const data = await res.json();
+            if (data.history && data.history.length > 0) {
+                let html = '<table class="w-full text-left text-xs"><thead class="bg-slate-50 text-slate-500 font-bold uppercase border-b"><tr><th class="p-2">Book</th><th class="p-2">Format</th><th class="p-2">Issued</th><th class="p-2">Due</th><th class="p-2">Status</th><th class="p-2">Fine</th></tr></thead><tbody class="divide-y">';
+                data.history.forEach(t => {
+                    const statusBadge = t.status === 'Issued' 
+                        ? '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">Issued</span>'
+                        : '<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">Returned</span>';
+                    const formatBadge = t.loan_type === 'ebook'
+                        ? '<span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 font-semibold">E-Book</span>'
+                        : '<span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">Physical</span>';
+                    html += `<tr>
+                        <td class="p-2 font-semibold text-slate-800">${t.book_title}</td>
+                        <td class="p-2">${formatBadge}</td>
+                        <td class="p-2 text-slate-500">${t.issue_date}</td>
+                        <td class="p-2 text-slate-500">${t.due_date}</td>
+                        <td class="p-2">${statusBadge}</td>
+                        <td class="p-2 font-bold ${t.fine_amount > 0 ? 'text-rose-600' : 'text-slate-400'}">₹${t.fine_amount.toFixed(2)}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                contentDiv.innerHTML = html;
+            } else {
+                contentDiv.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">No loans found for this student.</p>';
+            }
+        } catch (err) {
+            contentDiv.innerHTML = '<p class="text-center text-rose-500 text-sm py-6">Failed to load history.</p>';
+        }
+    }
+</script>
+{% endblock %}

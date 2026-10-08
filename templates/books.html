@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+
+{% block title %}Books Inventory & E-Book Content{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header with Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Library Books & E-Book Content Management</h2>
+            <p class="text-sm text-slate-500">Manage Hindi/English books, E-Book readable content, shelf locations, and copies.</p>
+        </div>
+        <button onclick="openModal('addBookModal')" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-sm shadow-indigo-600/30 transition">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span>Add New Book</span>
+        </button>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+        <form method="GET" action="{{ url_for('admin_books') }}" class="flex flex-1 flex-col sm:flex-row gap-3 w-full">
+            <div class="relative flex-1">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3"></i>
+                <input type="text" name="q" value="{{ query }}" placeholder="Search by title, author, or ISBN..." 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+
+            <!-- Language Filter -->
+            <div class="w-full sm:w-36">
+                <select name="language" onchange="this.form.submit()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Languages</option>
+                    <option value="Hindi" {% if selected_language == 'Hindi' %}selected{% endif %}>🇮🇳 Hindi</option>
+                    <option value="English" {% if selected_language == 'English' %}selected{% endif %}>🇬🇧 English</option>
+                </select>
+            </div>
+
+            <!-- Category Filter -->
+            <div class="w-full sm:w-44">
+                <select name="category" onchange="this.form.submit()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-sm font-semibold rounded-xl transition">
+                Search
+            </button>
+            {% if query or selected_category or selected_language %}
+                <a href="{{ url_for('admin_books') }}" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-medium rounded-xl transition flex items-center justify-center">
+                    Reset
+                </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Books Table -->
+    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50/75 text-slate-500 uppercase text-[11px] font-bold tracking-wider border-b border-slate-100">
+                    <tr>
+                        <th class="px-6 py-4">Title & Language</th>
+                        <th class="px-4 py-4">Category</th>
+                        <th class="px-4 py-4">Author</th>
+                        <th class="px-4 py-4">Shelf Location</th>
+                        <th class="px-4 py-4 text-center">Copies</th>
+                        <th class="px-4 py-4 text-center">E-Book Content</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% for b in books %}
+                        <tr class="hover:bg-slate-50/50 transition">
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-slate-900 text-sm">{{ b.title }}</div>
+                                <span class="inline-block mt-0.5 px-2 py-0.5 text-[11px] font-bold rounded {{ 'bg-amber-100 text-amber-800' if b.language == 'Hindi' else 'bg-sky-100 text-sky-800' }}">
+                                    {{ b.language }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 whitespace-nowrap">
+                                <span class="px-2.5 py-1 bg-slate-100 text-slate-700 font-semibold text-xs rounded-lg">
+                                    {{ b.category }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-4 text-slate-600 font-medium whitespace-nowrap">
+                                {{ b.author }}
+                            </td>
+                            <td class="px-4 py-4 text-xs font-semibold text-slate-700 whitespace-nowrap">
+                                {{ b.shelf_location or 'Shelf A1' }}
+                            </td>
+                            <td class="px-4 py-4 text-center whitespace-nowrap">
+                                <span class="font-bold text-slate-800">{{ b.available_copies }}</span>
+                                <span class="text-slate-400">/</span>
+                                <span class="text-slate-500">{{ b.total_copies }}</span>
+                            </td>
+                            <td class="px-4 py-4 text-center whitespace-nowrap">
+                                {% if b.content and b.content|length > 20 %}
+                                    <span class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
+                                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Ready to Read
+                                    </span>
+                                {% else %}
+                                    <span class="text-xs text-slate-400">No Content</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-right whitespace-nowrap space-x-2">
+                                <button onclick="editBookModal('{{ b.id }}', '{{ b.title|escape }}', '{{ b.author|escape }}', '{{ b.isbn|escape }}', '{{ b.category|escape }}', '{{ b.language|escape }}', '{{ b.shelf_location|escape }}', '{{ b.total_copies }}', `{{ b.content|escape }}`)" 
+                                        class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="Edit Book">
+                                    <i data-lucide="edit-3" class="w-4 h-4"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('admin_delete_book', book_id=b.id) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this book?');">
+                                    <button type="submit" class="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" title="Delete Book">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-slate-400">
+                                <i data-lucide="book-x" class="w-10 h-10 mx-auto mb-2 text-slate-300"></i>
+                                <p class="text-sm font-semibold text-slate-600">No books found in inventory.</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Book Modal -->
+<div id="addBookModal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="font-bold text-lg text-slate-900">Add New Book to Inventory</h3>
+            <button onclick="closeModal('addBookModal')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form method="POST" action="{{ url_for('admin_add_book') }}" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Book Title *</label>
+                <input type="text" name="title" required placeholder="e.g. श्रीमद्भगवद्गीता or Clean Architecture" 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Author *</label>
+                    <input type="text" name="author" required placeholder="Author name" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Language *</label>
+                    <select name="language" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="English">English</option>
+                        <option value="Hindi">Hindi (हिंदी)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Category *</label>
+                    <select name="category" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="Motivation">Motivation</option>
+                        <option value="Spiritual">Spiritual</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Tech">Tech</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Science">Science</option>
+                        <option value="Psychology">Psychology</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Shelf Location</label>
+                    <input type="text" name="shelf_location" placeholder="e.g. Section MOTIV-1" value="Section A1" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">ISBN</label>
+                    <input type="text" name="isbn" placeholder="978-0134494166" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Physical Copies</label>
+                    <input type="number" name="total_copies" value="5" min="1" max="500" 
+                           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">E-Book Reader Text Content (Chapters & Matter)</label>
+                <textarea name="content" rows="4" placeholder="Enter readable text/matter for students to read online..." 
+                          class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+                <span class="text-[11px] text-slate-400 mt-1 block">Students will read this online in the digital E-Book reader.</span>
+            </div>
+            <div class="flex justify-end gap-3 pt-3">
+                <button type="button" onclick="closeModal('addBookModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm">Save Book</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Book Modal -->
+<div id="editBookModal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 md:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-5">
+            <h3 class="font-bold text-lg text-slate-900">Edit Book & E-Book Content</h3>
+            <button onclick="closeModal('editBookModal')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <form id="editBookForm" method="POST" action="" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Book Title *</label>
+                <input type="text" id="editTitle" name="title" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Author *</label>
+                    <input type="text" id="editAuthor" name="author" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Language *</label>
+                    <select id="editLanguage" name="language" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="English">English</option>
+                        <option value="Hindi">Hindi (हिंदी)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Category *</label>
+                    <select id="editCategory" name="category" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="Motivation">Motivation</option>
+                        <option value="Spiritual">Spiritual</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Tech">Tech</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Science">Science</option>
+                        <option value="Psychology">Psychology</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Shelf Location</label>
+                    <input type="text" id="editShelf" name="shelf_location" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">ISBN</label>
+                    <input type="text" id="editIsbn" name="isbn" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">Total Physical Copies</label>
+                    <input type="number" id="editCopies" name="total_copies" min="1" max="500" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1.5">E-Book Reader Text Content (Readable Matter)</label>
+                <textarea id="editContent" name="content" rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+            </div>
+            <div class="flex justify-end gap-3 pt-3">
+                <button type="button" onclick="closeModal('editBookModal')" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl">Cancel</button>
+                <button type="submit" class="px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm">Update Book</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+    }
+    function editBookModal(id, title, author, isbn, category, language, shelf, copies, content) {
+        document.getElementById('editBookForm').action = '/admin/books/edit/' + id;
+        document.getElementById('editTitle').value = title;
+        document.getElementById('editAuthor').value = author;
+        document.getElementById('editIsbn').value = (isbn === 'None' || !isbn) ? '' : isbn;
+        document.getElementById('editCategory').value = category;
+        document.getElementById('editLanguage').value = language || 'English';
+        document.getElementById('editShelf').value = (shelf === 'None' || !shelf) ? 'Shelf A1' : shelf;
+        document.getElementById('editCopies').value = copies;
+        document.getElementById('editContent').value = content || '';
+        openModal('editBookModal');
+    }
+</script>
+{% endblock %}

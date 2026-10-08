@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Library Management System{% endblock %} - LMS</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1',
+                            600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- TOP HEADER: LIVE LIBRARY TIMINGS & SUNDAY OFF STATUS -->
+    <header class="bg-slate-900 border-b border-slate-800 text-white text-xs px-4 md:px-8 py-2.5 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 shadow-sm">
+        <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-300">Library Schedule:</span>
+            <span class="text-slate-400">{{ library_status.working_hours }}</span>
+            <span class="hidden sm:inline text-slate-600">|</span>
+            <span class="hidden sm:inline text-slate-400">Sunday: <strong class="text-rose-400">CLOSED (Weekly Off)</strong></span>
+        </div>
+
+        <div class="flex items-center gap-3 ml-auto">
+            <!-- Dynamic Status Badge -->
+            {% if library_status.is_open %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    {{ library_status.badge_text }}
+                </span>
+            {% else %}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
+                    <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                    {{ library_status.badge_text }}
+                </span>
+            {% endif %}
+
+            <span class="text-slate-400 hidden md:inline">{{ library_status.current_date }} ({{ library_status.current_time }})</span>
+
+            <!-- Dark Mode Toggle -->
+            <button onclick="toggleDark()" title="Toggle Dark Mode"
+                class="p-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition flex-shrink-0">
+                <i id="dark-icon" data-lucide="moon" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN APP CONTAINER -->
+    <div class="flex flex-1 min-h-[calc(100vh-41px)]">
+        <!-- Sidebar Navigation -->
+        {% if current_user %}
+        <aside id="sidebar" class="hidden md:flex flex-col w-64 bg-slate-900 dark:bg-slate-950 text-slate-300 p-5 flex-shrink-0 border-r border-slate-800">
+            <!-- Brand -->
+            <div class="flex items-center space-x-3 px-2 py-4 mb-6 border-b border-slate-800">
+                {% if current_user.role in ('admin', 'librarian') %}
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/30">
+                        <i data-lucide="shield-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-black text-lg text-white leading-tight">LibriFlow</h1>
+                        <p class="text-[11px] text-teal-400 font-bold uppercase tracking-wider">👑 Admin Command</p>
+                    </div>
+                {% else %}
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                        <i data-lucide="book-marked" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg text-white leading-tight">LibriFlow</h1>
+                        <p class="text-[11px] text-indigo-400 font-bold uppercase tracking-wider">🎓 Student Portal</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Role-based Navigation -->
+            <nav class="space-y-1.5 flex-1">
+                {% if current_user.role in ('admin', 'librarian') %}
+                    <!-- ADMIN NAV -->
+                    <a href="{{ url_for('admin_dashboard') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition {% if request.endpoint == 'admin_dashboard' %}bg-teal-600 text-white shadow-md shadow-teal-600/30{% else %}hover:bg-slate-800 hover:text-white{% endif %}">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>Admin Dashboard</span>
+                    </a>
+
+                    <a href="{{ url_for('admin_books') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition {% if request.endpoint == 'admin_books' %}bg-teal-600 text-white shadow-md shadow-teal-600/30{% else %}hover:bg-slate-800 hover:text-white{% endif %}">
+                        <i data-lucide="book" class="w-5 h-5"></i>
+                        <span>Manage Books</span>
+                    </a>
+
+                    <a href="{{ url_for('admin_students') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition {% if request.endpoint == 'admin_students' %}bg-teal-600 text-white shadow-md shadow-teal-600/30{% else %}hover:bg-slate-800 hover:text-white{% endif %}">
+                        <i data-lucide="users" class="w-5 h-5"></i>
+                        <span>Students</span>
+                    </a>
+
+                    <a href="{{ url_for('admin_transactions') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition {% if request.endpoint == 'admin_transactions' %}bg-teal-600 text-white shadow-md shadow-teal-600/30{% else %}hover:bg-slate-800 hover:text-white{% endif %}">
+                        <i data-lucide="repeat" class="w-5 h-5"></i>
+                        <span>Circulation & Fines</span>
+                    </a>
+
+                    <a href="{{ url_for('export_csv') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition hover:bg-slate-800 hover:text-teal-300">
+                        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-400"></i>
+                        <span>Export Data (CSV)</span>
+                    </a>
+                {% else %}
+                    <!-- STUDENT NAV -->
+                    <a href="{{ url_for('student_dashboard') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition {% if request.endpoint == 'student_dashboard' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/30{% else %}hover:bg-slate-800 hover:text-white{% endif %}">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                        <span>My Dashboard</span>
+                    </a>
+
+                    <a href="{{ url_for('student_catalog') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition {% if request.endpoint == 'student_catalog' %}bg-indigo-600 text-white shadow-md shadow-indigo-600/30{% else %}hover:bg-slate-800 hover:text-white{% endif %}">
+                        <i data-lucide="search" class="w-5 h-5"></i>
+                        <span>Browse Catalog</span>
+                    </a>
+
+                    <a href="{{ url_for('student_notifications') }}" 
+                       class="flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition {% if request.endpoint == 'student_notifications' %}bg-violet-600 text-white shadow-md shadow-violet-600/30{% else %}hover:bg-slate-800 hover:text-white{% endif %}">
+                        <i data-lucide="bell" class="w-5 h-5"></i>
+                        <span>Notifications</span>
+                        {% if unread_notifications > 0 %}
+                        <span class="ml-auto bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                            {{ unread_notifications }}
+                        </span>
+                        {% endif %}
+                    </a>
+                {% endif %}
+            </nav>
+
+            <!-- User Profile & Logout -->
+            <div class="pt-4 border-t border-slate-800 space-y-3">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-9 h-9 rounded-xl {% if current_user.role in ('admin', 'librarian') %}bg-teal-500/20 text-teal-400 border border-teal-500/30{% else %}bg-indigo-500/20 text-indigo-400 border border-indigo-500/30{% endif %} font-bold flex items-center justify-center text-sm">
+                        {{ current_user.name[:1] }}
+                    </div>
+                    <div class="overflow-hidden">
+                        <p class="font-bold text-white text-sm truncate">{{ current_user.name }}</p>
+                        <p class="text-xs text-slate-400 font-mono">ID: {{ current_user.username }}</p>
+                    </div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="flex items-center space-x-3 px-4 py-2.5 rounded-xl font-medium text-rose-400 hover:bg-rose-500/10 transition text-sm">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                    <span>Log Out</span>
+                </a>
+            </div>
+        </aside>
+        {% endif %}
+
+        <!-- Content Area -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-y-auto">
+            <!-- Mobile Navigation Bar -->
+            {% if current_user %}
+            <div class="md:hidden bg-slate-900 text-white p-4 flex items-center justify-between shadow-sm">
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="{% if current_user.role in ('admin', 'librarian') %}shield-check{% else %}book-marked{% endif %}" class="w-5 h-5 {% if current_user.role in ('admin', 'librarian') %}text-teal-400{% else %}text-indigo-400{% endif %}"></i>
+                    <span class="font-bold">LibriFlow ({{ current_user.role|capitalize }})</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    {% if current_user.role in ('admin', 'librarian') %}
+                        <a href="{{ url_for('admin_dashboard') }}" class="text-xs text-teal-300 px-2 py-1 bg-slate-800 rounded">Dashboard</a>
+                        <a href="{{ url_for('admin_books') }}" class="text-xs text-slate-300 px-2 py-1 bg-slate-800 rounded">Books</a>
+                    {% else %}
+                        <a href="{{ url_for('student_dashboard') }}" class="text-xs text-indigo-300 px-2 py-1 bg-slate-800 rounded">Dashboard</a>
+                        <a href="{{ url_for('student_catalog') }}" class="text-xs text-slate-300 px-2 py-1 bg-slate-800 rounded">Catalog</a>
+                    {% endif %}
+                    <a href="{{ url_for('logout') }}" class="text-xs text-rose-400 font-bold px-2 py-1 bg-slate-800 rounded">Logout</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Flash Alert Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="p-6 pb-0 space-y-3">
+                        {% for category, message in messages %}
+                            <div class="flex items-center justify-between p-4 rounded-xl text-sm font-semibold shadow-sm transition
+                                {% if category == 'success' %}bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
+                                {% elif category == 'danger' %}bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800
+                                {% elif category == 'warning' %}bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800
+                                {% else %}bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800{% endif %}">
+                                <div class="flex items-center space-x-3">
+                                    <i data-lucide="info" class="w-5 h-5 flex-shrink-0"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button onclick="this.parentElement.remove()" class="p-1 hover:opacity-75">
+                                    <i data-lucide="x" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="p-6 md:p-8 flex-1">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Dark mode support
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+            const icon = document.getElementById('dark-icon');
+            if (icon) icon.setAttribute('data-lucide', 'sun');
+        } else {
+            document.documentElement.classList.remove('dark');
+            const icon = document.getElementById('dark-icon');
+            if (icon) icon.setAttribute('data-lucide', 'moon');
+        }
+
+        function toggleDark() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            const icon = document.getElementById('dark-icon');
+            if (icon) {
+                icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        lucide.createIcons();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

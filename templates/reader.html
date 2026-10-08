@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ trans.title }} - E-Book Reader</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .reader-font {
+            font-family: 'Merriweather', serif;
+        }
+    </style>
+</head>
+<body id="readerBody" class="bg-amber-50/40 text-slate-800 min-h-screen flex flex-col transition-colors duration-200">
+
+    <!-- Reader Navbar -->
+    <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 md:px-8 py-3.5 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('student_dashboard') }}" class="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition" title="Back to Dashboard">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </a>
+            <div>
+                <h1 class="font-bold text-slate-900 text-sm md:text-base leading-tight">{{ trans.title }}</h1>
+                <p class="text-xs text-slate-500 font-medium">By {{ trans.author }} &bull; <span class="text-indigo-600 font-semibold">{{ trans.language }} Edition</span></p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- Font Size Controls -->
+            <button onclick="changeFontSize(-2)" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100">
+                A-
+            </button>
+            <button onclick="changeFontSize(2)" class="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100">
+                A+
+            </button>
+            <!-- Dark / Sepia / Light theme toggle -->
+            <button onclick="toggleTheme()" id="themeBtn" class="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100">
+                <i data-lucide="moon" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Reading Progress Bar & Due Notice -->
+    <div class="bg-indigo-50 border-b border-indigo-100 px-4 md:px-8 py-2 flex items-center justify-between text-xs text-indigo-900">
+        <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Digital E-Book Access Active &bull; Return Due: <strong>{{ trans.due_date }}</strong></span>
+        </div>
+        <span class="text-indigo-600 font-semibold hidden sm:inline">LibriFlow Digital Reader</span>
+    </div>
+
+    <!-- Main Content Reader Container -->
+    <main class="flex-1 max-w-3xl w-full mx-auto px-6 py-10 md:py-16">
+        <div class="mb-10 text-center border-b border-slate-200 pb-8">
+            <span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold uppercase tracking-wider">
+                {{ trans.category }}
+            </span>
+            <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mt-4 leading-tight reader-font">{{ trans.title }}</h2>
+            <p class="text-sm text-slate-500 mt-2 font-medium">Authored by {{ trans.author }}</p>
+        </div>
+
+        <!-- Book Text Content -->
+        <article id="readerContent" class="reader-font text-base md:text-lg leading-relaxed text-slate-800 space-y-6 whitespace-pre-line">
+            {{ trans.content or "No readable text content uploaded for this book yet. Please contact the librarian." }}
+        </article>
+
+        <!-- End of Book Banner -->
+        <div class="mt-16 pt-8 border-t border-slate-200 text-center">
+            <div class="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="check" class="w-6 h-6"></i>
+            </div>
+            <h3 class="font-bold text-slate-800 text-base">You have reached the end of this preview/chapter</h3>
+            <p class="text-xs text-slate-400 mt-1">Access valid until {{ trans.due_date }}. Return anytime from your dashboard.</p>
+            <a href="{{ url_for('student_dashboard') }}" class="inline-block mt-4 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition">
+                Back to My Dashboard
+            </a>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        let currentFontSize = 18;
+        function changeFontSize(delta) {
+            currentFontSize += delta;
+            if (currentFontSize < 14) currentFontSize = 14;
+            if (currentFontSize > 28) currentFontSize = 28;
+            document.getElementById('readerContent').style.fontSize = currentFontSize + 'px';
+        }
+
+        let isDark = false;
+        function toggleTheme() {
+            isDark = !isDark;
+            const body = document.getElementById('readerBody');
+            const content = document.getElementById('readerContent');
+            if (isDark) {
+                body.className = "bg-slate-900 text-slate-100 min-h-screen flex flex-col transition-colors duration-200";
+                content.className = "reader-font text-base md:text-lg leading-relaxed text-slate-200 space-y-6 whitespace-pre-line";
+            } else {
+                body.className = "bg-amber-50/40 text-slate-800 min-h-screen flex flex-col transition-colors duration-200";
+                content.className = "reader-font text-base md:text-lg leading-relaxed text-slate-800 space-y-6 whitespace-pre-line";
+            }
+        }
+    </script>
+</body>
+</html>

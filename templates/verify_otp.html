@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Verify — LibriFlow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-amber-900 via-orange-900 to-rose-900 flex items-center justify-center p-4">
+
+    <div class="w-full max-w-sm">
+        <div class="bg-white rounded-3xl shadow-2xl shadow-black/50 overflow-hidden">
+
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-8 pt-8 pb-6 text-center">
+                <div class="text-5xl mb-3">📱</div>
+                <h2 class="text-xl font-extrabold text-white">OTP Verify Karo</h2>
+                <p class="text-amber-100/80 text-xs mt-1">
+                    +91 {{ phone[:2] }}XXXXXXXX{{ phone[-2:] }}
+                </p>
+            </div>
+
+            <div class="px-8 py-7">
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="mb-4 p-3 rounded-xl text-xs font-medium flex items-start gap-2
+                            {% if category == 'danger' %}bg-red-50 text-red-700 border border-red-200
+                            {% elif category == 'success' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                            {% elif category == 'warning' %}bg-amber-50 text-amber-700 border border-amber-200
+                            {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+                            <i data-lucide="info" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- ── OTP Status Box ── -->
+                {% if sms_sent %}
+                <div class="mb-6 p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-center">
+                    <div class="text-3xl mb-2">✅</div>
+                    <p class="font-bold text-emerald-700 text-sm">OTP aapke phone par bheja gaya!</p>
+                    <p class="text-xs text-emerald-600 mt-1">+91 {{ phone[:2] }}XXXXXXXX{{ phone[-2:] }}</p>
+                    <p class="text-xs text-emerald-500 mt-1">SMS mein aaya OTP neeche enter karein</p>
+                </div>
+                {% else %}
+                <div class="mb-6 p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-center">
+                    <p class="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">
+                        ⚠️ SMS Failed — Demo OTP:
+                    </p>
+                    <p class="text-4xl font-black tracking-[0.5em] text-orange-600 font-mono py-2">
+                        {{ session.get('demo_otp', '------') }}
+                    </p>
+                    <p class="text-[11px] text-amber-600 mt-1">
+                        Real SMS nahi aaya. Upar wala code use karein.
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- OTP Input -->
+                <form method="POST" action="{{ url_for('verify_otp') }}" class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                            6-Digit OTP Enter Karo
+                        </label>
+                        <input type="text" name="otp_code" required maxlength="6" minlength="6"
+                            placeholder="_ _ _ _ _ _"
+                            autocomplete="one-time-code"
+                            oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                            class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-4 text-2xl font-black tracking-[0.5em] text-center text-slate-800 focus:ring-2 focus:ring-amber-400 focus:border-amber-400 focus:outline-none transition font-mono">
+                    </div>
+
+                    <button type="submit"
+                        class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-amber-500/30 transition flex items-center justify-center gap-2">
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        Verify & Login
+                    </button>
+                </form>
+
+                <!-- Resend + Back -->
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                    <form method="POST" action="{{ url_for('resend_otp') }}">
+                        <button type="submit"
+                            class="w-full py-2.5 border-2 border-amber-300 text-amber-600 hover:bg-amber-50 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                            Resend OTP
+                        </button>
+                    </form>
+                    <a href="{{ url_for('login') }}"
+                        class="py-2.5 border-2 border-slate-200 text-slate-500 hover:bg-slate-50 font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+                        Wapas Jao
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>
