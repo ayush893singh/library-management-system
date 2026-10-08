@@ -78,3 +78,6 @@ python cli.py
 | **Student** | `STU-1001` | `student123` | View personal borrowed books, countdowns, fines, catalog |
 | **Student 2** | `STU-1002` | `student123` | Test multi-student borrowing |
 | **...etc**
+
+## Author
+   Ayush Singh https://github.com/ayush893singh
