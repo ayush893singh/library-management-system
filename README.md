@@ -6,7 +6,7 @@ A complete, full-featured **Library Management System** built with **Python (Fla
 
 ---
 
-## 🌟 Key Features
+##  Key Features
 
 1. **Authentication (No Gmail Needed!)**:
    - **Admin Login:**
@@ -47,7 +47,7 @@ A complete, full-featured **Library Management System** built with **Python (Fla
 
 ---
 
-## 🚀 How to Run
+##  How to Run
 
 ### Method 1: Double-click Launcher (Windows)
 Double-click `run.bat` in this folder.
@@ -70,10 +70,11 @@ python cli.py
 
 ---
 
-## 🔑 Login Credentials
+##  Login Credentials
 
 | Role | Login Identifier (No Gmail!) | Password | Capabilities |
 | :--- | :--- | :--- | :--- |
 | **Admin** | `admin` | `admin123` | Full library control, circulation, students, notices |
 | **Student** | `STU-1001` | `student123` | View personal borrowed books, countdowns, fines, catalog |
 | **Student 2** | `STU-1002` | `student123` | Test multi-student borrowing |
+| **...etc**
