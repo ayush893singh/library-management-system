@@ -1,3 +1,5 @@
+# CLONE --- Library Management System ---
+
 # Complete Library Management System (LMS)
 
 A complete, full-featured **Library Management System** built with **Python (Flask)**, **SQLite**, and styled using modern **Tailwind CSS** with **Lucide Icons**.
