@@ -61,6 +61,8 @@ python app.py
 ```
 Open your browser and visit: **http://127.0.0.1:5000**
 
+Live Server: **https://my-library-system-ok3a.onrender.com**
+
 ### Method 3: Terminal CLI Mode (No browser needed)
 ```powershell
 cd "C:\Users\Ayush Singh\.gemini\antigravity\scratch\library_management_system"
