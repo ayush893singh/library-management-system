@@ -62,6 +62,8 @@ python app.py
 Open your browser and visit: **http://127.0.0.1:5000**
 
 Live Server: **https://my-library-system-ok3a.onrender.com**
+- Application Loading and run 
+
 
 ### Method 3: Terminal CLI Mode (No browser needed)
 ```powershell
